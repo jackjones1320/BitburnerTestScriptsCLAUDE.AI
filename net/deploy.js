@@ -25,9 +25,15 @@ export async function main(ns) {
     await ns.scp(WORKERS, host, "home");
   }
 
-  // Launch hacknet daemon FIRST so its RAM is reserved before workers fill the host
+  // Launch hacknet daemon FIRST so its RAM is reserved before workers fill the host.
+  // If hacknet isn't running, kill any workers on this host to clear RAM for it,
+  // then exec hacknet — workers will be re-deployed below with correct thread counts.
   const me = ns.getHostname();
   if (!ns.ps(me).find(p => p.filename === "money/hacknet.js")) {
+    for (const proc of ns.ps(me)) {
+      if (WORKERS.includes(proc.filename)) ns.kill(proc.pid);
+    }
+    await ns.sleep(200); // let RAM free up
     ns.exec("money/hacknet.js", me, 1);
   }
 
