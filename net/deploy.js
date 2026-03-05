@@ -28,15 +28,15 @@ export async function main(ns) {
   // Deploy on all hosts including home
   const hosts = ["home", ...rooted];
   for (const host of hosts) {
-    killStaleWorkers(ns, host, target);
     deployOn(ns, host, target);
   }
 }
 
-/** Kill workers on this host that are targeting a different server. */
-function killStaleWorkers(ns, host, target) {
+/** Kill workers on this host that are targeting the wrong server or running the wrong script. */
+function killWrongWorkers(ns, host, target, script) {
   for (const proc of ns.ps(host)) {
-    if (WORKERS.includes(proc.filename) && proc.args[0] !== target) {
+    if (WORKERS.includes(proc.filename) &&
+        (proc.args[0] !== target || proc.filename !== script)) {
       ns.kill(proc.pid);
     }
   }
@@ -59,14 +59,17 @@ function deployOn(ns, host, target) {
     script = WORKER_HACK;
   }
 
-  const threads = maxThreads(ns, host, script);
-  if (threads <= 0) return;
+  // Kill workers targeting wrong server or running wrong script type
+  killWrongWorkers(ns, host, target, script);
 
-  // Don't re-launch if already running with same args
+  // Don't re-launch if correct workers already running
   const running = ns.ps(host).find(
     p => p.filename === script && p.args[0] === target
   );
   if (running) return;
+
+  const threads = maxThreads(ns, host, script);
+  if (threads <= 0) return;
 
   ns.exec(script, host, threads, target);
 }
