@@ -16,10 +16,14 @@ Claude writes all `.js` scripts and commits them to this repo. The player runs `
 
 ### Workflow
 1. Claude writes/updates scripts in this repo
-2. Player runs `run git-pull.js` in Bitburner terminal
-3. Player runs the entry-point script (usually `run start.js`)
-4. If errors occur, player pastes them here
-5. Claude fixes and re-commits — repeat
+2. Player runs `killall` in Bitburner terminal (stops all running scripts)
+3. Player runs `run git-pull.js` in Bitburner terminal
+4. Player runs `run start.js`
+5. If errors occur, player pastes them here
+6. Claude fixes and re-commits — repeat
+
+> **Important:** Always `killall` before `git-pull.js` + `start.js` to avoid
+> stale scripts conflicting with updated ones.
 
 ---
 
