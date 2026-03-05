@@ -30,6 +30,12 @@ export async function main(ns) {
   for (const host of hosts) {
     deployOn(ns, host, target);
   }
+
+  // Launch hacknet daemon on this host (has plenty of RAM here)
+  const me = ns.getHostname();
+  if (!ns.ps(me).find(p => p.filename === "money/hacknet.js")) {
+    ns.exec("money/hacknet.js", me, 1);
+  }
 }
 
 /** Kill workers on this host that are targeting the wrong server or running the wrong script. */
