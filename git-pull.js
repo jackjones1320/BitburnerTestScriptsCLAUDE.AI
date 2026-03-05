@@ -13,9 +13,9 @@ export async function main(ns) {
   // ============================================================
   // CONFIGURATION — update REPO_BASE to match your GitHub repo
   // ============================================================
-  const GITHUB_USER = "YOUR_GITHUB_USERNAME";
-  const GITHUB_REPO = "YOUR_REPO_NAME";
-  const BRANCH = "main";
+  const GITHUB_USER = "jackjones1320";
+  const GITHUB_REPO = "BitburnerTestScriptsCLAUDE.AI";
+  const BRANCH = "claude/bitburner-reset-rYKSu";
 
   const REPO_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${BRANCH}`;
 
