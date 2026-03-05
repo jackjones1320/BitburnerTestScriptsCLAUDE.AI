@@ -1,59 +1,63 @@
 /**
- * start.js — Main entry point for Bitburner automation.
+ * start.js — Lean orchestrator (~3.15 GB RAM).
  *
- * Orchestrates the full BN1 strategy by launching and supervising
- * dedicated daemon scripts. Kept intentionally thin to minimise RAM:
- *   - net/crawler.js   handles rooting servers
- *   - net/deploy.js    deploys workers across all servers
- *   - money/hacknet.js manages hacknet nodes
- *   - money/servers.js buys/upgrades purchased servers (expensive APIs live there)
- *   - faction/manager.js + singularity/autopilot.js handle late-game
+ * Responsibilities:
+ *  1. Run net/crawler.js on home to root servers and seed scripts.
+ *  2. Run net/deploy.js on the best rooted external server (foodnstuff
+ *     has 16 GB, far more than the ~5.5 GB deploy.js needs).
  *
- * Re-checks every loop to restart any daemon that has exited.
+ * Everything else (hacknet, faction, autopilot) is launched by deploy.js
+ * on the external host once it has room.
+ *
+ * RAM budget (8 GB home):
+ *   start.js  ~3.15 GB  (exec 1.3 + ps 0.2 + hasRootAccess 0.05 + base 1.6)
+ *   Free       ~4.85 GB  → enough for crawler (~3.8 GB, transient)
+ *
  * @param {NS} ns
  */
-const LOOP_SLEEP = 30000; // 30 seconds between main iterations
+const LOOP_SLEEP = 30_000;
 
 export async function main(ns) {
   ns.disableLog("ALL");
   ns.tprint("=== start.js: Bitburner Automation Engaged ===");
 
-  // Start persistent daemons (only if not already running)
-  startDaemon(ns, "money/hacknet.js");
-  startDaemon(ns, "money/servers.js");
+  let seeded = false;
 
   while (true) {
-    // Root everything we can (crawler runs once and exits; re-exec each loop)
+    // 1. Root servers and seed scripts to them
     if (!ns.ps("home").find(p => p.filename === "net/crawler.js")) {
       ns.exec("net/crawler.js", "home", 1);
+      if (!seeded) {
+        // First run: wait for crawler to finish copying files before continuing
+        await ns.sleep(8000);
+        seeded = true;
+      }
     }
 
-    // Deploy workers across all rooted servers
-    if (!ns.ps("home").find(p => p.filename === "net/deploy.js")) {
-      ns.exec("net/deploy.js", "home", 1);
+    // 2. Run deploy.js on the best rooted external server
+    const dHost = findDeployHost(ns);
+    if (dHost) {
+      if (!ns.ps(dHost).find(p => p.filename === "net/deploy.js")) {
+        ns.exec("net/deploy.js", dHost, 1);
+      }
     }
 
-    // Faction manager + singularity autopilot (self-exit if API unavailable)
-    startDaemon(ns, "faction/manager.js");
-    startDaemon(ns, "singularity/autopilot.js");
-
-    printStatus(ns);
-
+    ns.tprint(`[start] deploy host: ${dHost ?? "waiting for rooted server..."}`);
     await ns.sleep(LOOP_SLEEP);
   }
 }
 
-function startDaemon(ns, script) {
-  if (ns.ps("home").find(p => p.filename === script)) return;
-  ns.exec(script, "home", 1);
-}
-
-function printStatus(ns) {
-  const money = ns.getPlayer().money;
-  const hackLevel = ns.getHackingLevel();
-  const moneyStr = money >= 1e9  ? `$${(money / 1e9).toFixed(2)}B`
-                 : money >= 1e6  ? `$${(money / 1e6).toFixed(2)}M`
-                 : money >= 1e3  ? `$${(money / 1e3).toFixed(2)}K`
-                 : `$${money.toFixed(0)}`;
-  ns.tprint(`[start] Hack:${hackLevel} | Money:${moneyStr}`);
+/**
+ * Find the first rooted server with enough RAM to host deploy.js.
+ * Ordered by preference (most RAM first).
+ */
+function findDeployHost(ns) {
+  const candidates = [
+    "foodnstuff", "joesguns", "harakiri-sushi", "hong-fang-tea",
+    "nectar-net", "sigma-cosmetics", "phantasy", "n00dles",
+  ];
+  for (const h of candidates) {
+    if (ns.hasRootAccess(h)) return h;
+  }
+  return null;
 }
