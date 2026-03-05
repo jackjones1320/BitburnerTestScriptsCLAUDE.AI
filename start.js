@@ -12,16 +12,11 @@
  * Re-checks every loop to restart any daemon that has exited.
  * @param {NS} ns
  */
-import { WORKER_HACK, WORKER_GROW, WORKER_WEAKEN } from "utils/constants.js";
-
 const LOOP_SLEEP = 30000; // 30 seconds between main iterations
 
 export async function main(ns) {
   ns.disableLog("ALL");
   ns.tprint("=== start.js: Bitburner Automation Engaged ===");
-
-  // Kill any orphaned workers from previous runs
-  cleanupOldWorkers(ns);
 
   // Start persistent daemons (only if not already running)
   startDaemon(ns, "money/hacknet.js");
@@ -50,28 +45,15 @@ export async function main(ns) {
 
 function startDaemon(ns, script) {
   if (ns.ps("home").find(p => p.filename === script)) return;
-  const ram = ns.getScriptRam(script, "home");
-  const free = ns.getServerMaxRam("home") - ns.getServerUsedRam("home");
-  if (free >= ram) {
-    ns.exec(script, "home", 1);
-  }
-}
-
-function cleanupOldWorkers(ns) {
-  const workers = [WORKER_HACK, WORKER_GROW, WORKER_WEAKEN];
-  for (const proc of ns.ps("home")) {
-    if (workers.includes(proc.filename)) ns.kill(proc.pid);
-  }
+  ns.exec(script, "home", 1);
 }
 
 function printStatus(ns) {
   const money = ns.getPlayer().money;
   const hackLevel = ns.getHackingLevel();
-  const pservers = ns.getPurchasedServers().length;
-  const homeRam = ns.getServerMaxRam("home");
   const moneyStr = money >= 1e9  ? `$${(money / 1e9).toFixed(2)}B`
                  : money >= 1e6  ? `$${(money / 1e6).toFixed(2)}M`
                  : money >= 1e3  ? `$${(money / 1e3).toFixed(2)}K`
                  : `$${money.toFixed(0)}`;
-  ns.tprint(`[start] Hack:${hackLevel} | Money:${moneyStr} | PServers:${pservers} | Home RAM:${homeRam}GB`);
+  ns.tprint(`[start] Hack:${hackLevel} | Money:${moneyStr}`);
 }
