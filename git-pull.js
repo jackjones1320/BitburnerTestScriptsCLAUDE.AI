@@ -15,7 +15,7 @@ export async function main(ns) {
   // ============================================================
   const GITHUB_USER = "jackjones1320";
   const GITHUB_REPO = "BitburnerTestScriptsCLAUDE.AI";
-  const BRANCH = "claude/bitburner-reset-rYKSu";
+  const BRANCH = "main";
 
   const REPO_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${BRANCH}`;
 
@@ -41,6 +41,7 @@ export async function main(ns) {
     // Money
     "money/hacknet.js",
     "money/share.js",
+    "money/servers.js",
 
     // Faction
     "faction/manager.js",
