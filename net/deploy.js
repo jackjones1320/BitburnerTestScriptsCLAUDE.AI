@@ -25,16 +25,16 @@ export async function main(ns) {
     await ns.scp(WORKERS, host, "home");
   }
 
+  // Launch hacknet daemon FIRST so its RAM is reserved before workers fill the host
+  const me = ns.getHostname();
+  if (!ns.ps(me).find(p => p.filename === "money/hacknet.js")) {
+    ns.exec("money/hacknet.js", me, 1);
+  }
+
   // Deploy on all hosts including home
   const hosts = ["home", ...rooted];
   for (const host of hosts) {
     deployOn(ns, host, target);
-  }
-
-  // Launch hacknet daemon on this host (has plenty of RAM here)
-  const me = ns.getHostname();
-  if (!ns.ps(me).find(p => p.filename === "money/hacknet.js")) {
-    ns.exec("money/hacknet.js", me, 1);
   }
 }
 
